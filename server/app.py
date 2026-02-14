@@ -119,5 +119,5 @@ def test_push():
     send_push_to_all("Test", "This is a test notification")
     return jsonify({"success": True, "sent_to": len(subscriptions)})
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+# if __name__ == '__main__':
+#     app.run(host='0.0.0.0', port=5000, debug=True)

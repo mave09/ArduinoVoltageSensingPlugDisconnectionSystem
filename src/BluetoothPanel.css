@@ -1,0 +1,109 @@
+.bluetooth-panel {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 350px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.status-indicator {
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  background: #f5f5dc;
+  color: #000000;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.status-indicator.connected {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.status-indicator.loading {
+  background: #6699cc;
+  color: #ffffff;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.controls select {
+  flex: 1;
+  min-width: 150px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+
+.controls button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.controls button.connect {
+  background: #f5f5dc;
+  color: #000000;
+  font-style: italic;
+}
+
+.controls button.connect:hover:not(:disabled) {
+  background: #e8e8c8;
+}
+
+.controls button.disconnect {
+  background: #6699cc;
+  color: white;
+}
+
+.controls button.disconnect:hover:not(:disabled) {
+  background: #5588bb;
+}
+
+.controls button:not(.connect):not(.disconnect) {
+  background: #e0e0e0;
+}
+
+.controls button:not(.connect):not(.disconnect):hover:not(:disabled) {
+  background: #bdbdbd;
+}
+
+.error-message {
+  color: #c62828;
+  font-size: 12px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 480px) {
+  .controls {
+    flex-direction: column;
+  }
+  
+  .controls select {
+    width: 100%;
+  }
+  
+  .controls button {
+    width: 100%;
+    padding: 12px;
+  }
+}

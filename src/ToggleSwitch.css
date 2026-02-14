@@ -1,0 +1,81 @@
+.toggle-switch {
+  position: relative;
+  width: 160px;
+  height: 64px;
+  border-radius: 32px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  transition: background 0.3s ease;
+}
+
+.toggle-switch.off {
+  background: #ffffff;
+}
+
+.toggle-switch.on {
+  background: #00004c;
+}
+
+.toggle-circle {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.3s ease, right 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-circle.left {
+  left: 8px;
+}
+
+.toggle-circle.right {
+  left: calc(100% - 56px);
+}
+
+.toggle-label {
+  font-size: 18px;
+  font-weight: 500;
+  text-transform: uppercase;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.toggle-switch.off .toggle-label {
+  margin-left: auto;
+  margin-right: 16px;
+  color: #000000;
+}
+
+.toggle-switch.on .toggle-label {
+  margin-left: 16px;
+  margin-right: auto;
+  color: #ffffff;
+}
+
+@media (max-width: 480px) {
+  .toggle-switch {
+    width: 140px;
+    height: 56px;
+  }
+  
+  .toggle-circle {
+    width: 42px;
+    height: 42px;
+  }
+  
+  .toggle-circle.right {
+    left: calc(100% - 50px);
+  }
+  
+  .toggle-label {
+    font-size: 16px;
+  }
+}

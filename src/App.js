@@ -4,12 +4,14 @@ import BluetoothPanel, { sendBluetooth } from './BluetoothPanel';
 import NotificationBar from './NotificationBar';
 import './App.css';
 
-// Update this with your ngrok backend URL when testing on mobile
+// API_URL configuration for different environments
 const API_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:5000/api'
-  : 'http://192.168.254.103:5000/api';
+  : `${window.location.origin}/api`;
   
-// For mobile testing via ngrok, uncomment and update:
+// For local network testing, you can temporarily use:
+// const API_URL = 'http://192.168.254.103:5000/api';
+// For mobile testing via ngrok, use:
 // const API_URL = 'https://YOUR-BACKEND-NGROK-URL.ngrok-free.app/api';
 
 function urlBase64ToUint8Array(base64String) {

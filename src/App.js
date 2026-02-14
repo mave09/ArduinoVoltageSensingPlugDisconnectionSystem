@@ -5,79 +5,43 @@ import NotificationBar from './NotificationBar';
 import './App.css';
 
 // API_URL configuration for different environments
-const API_URL = window.location.hostname === 'localhost' 
+let API_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:5000/api'
   : `${window.location.origin}/api`;
   
-// For local network testing, you can temporarily use:
+// For local network, detect if backend is on same network and use local IP
+if (window.location.hostname !== 'localhost' && !window.location.hostname.includes('vercel')) {
+  // Local network access - try to use the same hostname
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  API_URL = `${protocol}//${hostname}:5000/api`;
+}
+
+// For manual override, uncomment and update:
 // const API_URL = 'http://192.168.254.103:5000/api';
 // For mobile testing via ngrok, use:
 // const API_URL = 'https://YOUR-BACKEND-NGROK-URL.ngrok-free.app/api';
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-async function setupPushNotifications() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.log('Push not supported');
+function askNotificationPermission() {
+  if (!('Notification' in window)) {
+    console.log('Notifications not supported');
     return { supported: false };
   }
 
-  try {
-    // Register SW
-    console.log('Registering service worker...');
-    const registration = await navigator.serviceWorker.register('/sw.js');
-    console.log('SW registered:', registration);
-
-    // Wait for SW to be ready
-    await navigator.serviceWorker.ready;
-    console.log('SW ready');
-
-    // Request permission
-    console.log('Requesting notification permission...');
-    const permission = await Notification.requestPermission();
-    console.log('Permission:', permission);
-    
-    if (permission !== 'granted') {
+  return Notification.requestPermission().then(permission => {
+    console.log('Notification permission:', permission);
+    if (permission === 'granted') {
+      new Notification('✅ Enabled!', {
+        body: 'Notifications are now allowed 🎉'
+      });
+      return { supported: true, enabled: true };
+    } else {
       return { supported: true, enabled: false, reason: 'Permission denied' };
     }
-
-    // Get VAPID key
-    console.log('Getting VAPID key...');
-    const res = await fetch(`${API_URL}/vapid-public-key`);
-    const { publicKey } = await res.json();
-    console.log('VAPID key received');
-
-    // Subscribe
-    console.log('Subscribing to push...');
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey)
-    });
-    console.log('Subscription:', subscription);
-
-    // Send to server
-    console.log('Sending subscription to server...');
-    await fetch(`${API_URL}/subscribe`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(subscription.toJSON())
-    });
-    console.log('Subscription sent to server');
-
-    return { supported: true, enabled: true };
-  } catch (err) {
-    console.error('Push setup error:', err);
+  }).catch(err => {
+    console.error('Permission request error:', err);
     return { supported: true, enabled: false, reason: err.message };
-  }
+  });
 }
 
 function App() {
@@ -90,6 +54,18 @@ function App() {
   const lastStateRef = useRef({ status: false, function: true });
 
   useEffect(() => {
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+          console.log('Service Worker registered:', registration);
+        })
+        .catch(err => {
+          console.error('Service Worker registration failed:', err);
+        });
+    }
+
+    // Fetch initial state
     fetch(`${API_URL}/state`)
       .then(res => res.json())
       .then(data => {
@@ -110,56 +86,25 @@ function App() {
   }, []);
 
   const handleEnablePush = async () => {
-    showBar('Setting up notifications...');
-    
-    // Request notification permission first
-    if ('Notification' in window && Notification.permission === 'default') {
-      const permission = await Notification.requestPermission();
-      console.log('Notification permission:', permission);
-    }
-    
-    const result = await setupPushNotifications();
+    showBar('Requesting notification permission...');
+    const result = await askNotificationPermission();
     setPushStatus(result);
-    if (result.enabled) {
-      showBar('Push notifications enabled!');
-    } else {
+    if (!result.enabled) {
       showBar('Failed: ' + (result.reason || 'Unknown error'));
     }
   };
 
-  const sendNotification = useCallback(async (title, body) => {
-    console.log('sendNotification called:', title, body);
-    console.log('Notification in window:', 'Notification' in window);
-    console.log('Notification.permission:', Notification.permission);
+  const sendNotification = useCallback((title, body) => {
+    if (!('Notification' in window)) {
+      console.log('Notifications not supported');
+      return;
+    }
     
-    try {
-      if (!('Notification' in window)) {
-        console.log('Notifications not supported');
-        return;
-      }
-      
-      if (Notification.permission === "granted") {
-        // Try service worker notification first (works better in modern browsers)
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          const registration = await navigator.serviceWorker.ready;
-          await registration.showNotification(title, {
-            body: body,
-            icon: "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"
-          });
-          console.log('Service worker notification sent');
-        } else {
-          // Fallback to regular notification
-          new Notification(title, {
-            body: body,
-            icon: "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"
-          });
-          console.log('Regular notification sent');
-        }
-      } else {
-        console.log('Notification permission not granted');
-      }
-    } catch (err) {
-      console.error('Notification error:', err);
+    if (Notification.permission === 'granted') {
+      new Notification(title, {
+        body: body,
+        icon: "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"
+      });
     }
   }, []);
 
@@ -169,7 +114,7 @@ function App() {
       setStatusOn(true);
       lastStateRef.current = { ...lastStateRef.current, status: true };
       showBar('Status Active (from device)');
-      sendNotification('Status Update', 'Status is now Active');
+      sendNotification('Status Update', 'Power source is connected, socket is now turned on');
       // Update backend
       try {
         await fetch(`${API_URL}/set/status`, {
@@ -184,7 +129,7 @@ function App() {
       setStatusOn(false);
       lastStateRef.current = { ...lastStateRef.current, status: false };
       showBar('Status Inactive (from device)');
-      sendNotification('Status Update', 'Status is now Inactive');
+      sendNotification('Status Update', 'Power source is disconnected, socket is now turned off');
       // Update backend
       try {
         await fetch(`${API_URL}/set/status`, {
@@ -206,14 +151,24 @@ function App() {
         
         if (data.status !== lastStateRef.current.status) {
           setStatusOn(data.status);
+          const newStatus = data.status ? 'Power source is connected, socket is now turned on' : 'Power source is disconnected, socket is now turned off';
+          sendNotification('Status Changed', newStatus);
+        }
+        
+        if (data.function !== lastStateRef.current.function) {
+          setFunctionActive(data.function);
+          const newFunction = data.function ? 'Active' : 'Inactive';
+          sendNotification('Function Changed', `Function is now ${newFunction}`);
         }
         
         lastStateRef.current = { status: data.status, function: data.function };
-      } catch (err) {}
-    }, 2000);
+      } catch (err) {
+        console.error('Poll error:', err);
+      }
+    }, 500);
 
     return () => clearInterval(pollInterval);
-  }, [showBar]);
+  }, [sendNotification]);
 
   const handleToggle = async (name, setter, currentValue) => {
     const newValue = !currentValue;
@@ -226,6 +181,11 @@ function App() {
     
     sendBluetooth(`${name.toUpperCase()}_${command}`);
     showBar(`${label}: Turned ${command}`);
+    
+    const notification = name === 'status' 
+      ? (newValue ? 'Power source is connected, socket is now turned on' : 'Power source is disconnected, socket is now turned off')
+      : `${label} is now ${command}`;
+    sendNotification(`${label} Updated`, notification);
     
     try {
       await fetch(`${API_URL}/toggle/${name}`, { method: 'POST' });

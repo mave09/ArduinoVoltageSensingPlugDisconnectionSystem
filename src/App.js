@@ -45,8 +45,10 @@ function askNotificationPermission() {
 }
 
 function App() {
+  const swRegistrationRef = useRef(null);
   const [statusOn, setStatusOn] = useState(false);
   const [functionActive, setFunctionActive] = useState(true);
+  const [overrideSerial, setOverrideSerial] = useState(false);
   const [loading, setLoading] = useState(true);
   const [barMessage, setBarMessage] = useState('');
   const [barVisible, setBarVisible] = useState(false);
@@ -59,6 +61,7 @@ function App() {
       navigator.serviceWorker.register('/sw.js')
         .then(registration => {
           console.log('Service Worker registered:', registration);
+          swRegistrationRef.current = registration;
         })
         .catch(err => {
           console.error('Service Worker registration failed:', err);
@@ -91,6 +94,52 @@ function App() {
     setPushStatus(result);
     if (!result.enabled) {
       showBar('Failed: ' + (result.reason || 'Unknown error'));
+      return;
+    }
+
+    // After permission granted, subscribe to PushManager
+    try {
+      // Ensure we have a service worker registration
+      let registration = swRegistrationRef.current;
+      if (!registration) {
+        registration = await navigator.serviceWorker.register('/sw.js');
+        swRegistrationRef.current = registration;
+      }
+
+      // Get VAPID public key from server
+      const res = await fetch(`${API_URL}/vapid-public-key`);
+      const data = await res.json();
+      const publicKey = data.publicKey;
+
+      function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+      }
+
+      const sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+
+      // Send subscription to server
+      await fetch(`${API_URL}/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub)
+      });
+
+      setPushStatus({ supported: true, enabled: true });
+      showBar('Push subscription successful');
+    } catch (err) {
+      console.error('Push subscription failed:', err);
+      showBar('Push subscription failed');
+      setPushStatus({ supported: true, enabled: false, reason: err.message });
     }
   };
 
@@ -178,8 +227,12 @@ function App() {
     const label = name === 'status' ? 'Status' : 'Function';
     
     lastStateRef.current = { ...lastStateRef.current, [name]: newValue };
-    
-    sendBluetooth(`${name.toUpperCase()}_${command}`);
+    // If override is enabled, send raw ON/OFF to HM-10; otherwise send namespaced command
+    if (overrideSerial) {
+      sendBluetooth(command);
+    } else {
+      sendBluetooth(`${name.toUpperCase()}_${command}`);
+    }
     showBar(`${label}: Turned ${command}`);
     
     const notification = name === 'status' 
@@ -224,6 +277,12 @@ function App() {
           icon="flag"
           label={statusOn ? 'On' : 'Off'}
         />
+        <div className="override-row">
+          <label>
+            <input type="checkbox" checked={overrideSerial} onChange={(e) => setOverrideSerial(e.target.checked)} />
+            &nbsp;Override
+          </label>
+        </div>
       </div>
       
       <div className="disclaimer">For capstone use only.</div>

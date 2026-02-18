@@ -69,6 +69,12 @@
   background: #e8e8c8;
 }
 
+.override-row {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #000000;
+}
+
 @media (max-width: 480px) {
   .app {
     padding: 12px;

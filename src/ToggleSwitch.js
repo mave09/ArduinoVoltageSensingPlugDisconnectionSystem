@@ -13,16 +13,21 @@ const BulbIcon = ({ color }) => (
   </svg>
 );
 
-function ToggleSwitch({ isOn, onToggle, icon, label }) {
+function ToggleSwitch({ isOn, onToggle, icon, label, editable = true }) {
   const onColor = '#ffffff';  // white icon when on
   const offColor = '#000000'; // black icon when off
   
+  const classes = `toggle-switch ${isOn ? 'on' : 'off'} ${!editable ? 'disabled' : ''}`;
+
   return (
     <button
-      className={`toggle-switch ${isOn ? 'on' : 'off'}`}
-      onClick={onToggle}
+      className={classes}
+      onClick={editable ? onToggle : undefined}
+      disabled={!editable}
       aria-pressed={isOn}
-      aria-label={`${icon === 'flag' ? 'Notifications' : 'Function'} toggle, currently ${label}`}
+      aria-disabled={!editable}
+      aria-label={`${icon === 'flag' ? 'Notifications' : 'Function'} toggle, currently ${label}${!editable ? ' (read only)' : ''}`}
+      tabIndex={editable ? 0 : -1}
     >
       <div className={`toggle-circle ${isOn ? 'right' : 'left'}`}>
         {icon === 'flag' ? (

@@ -49,6 +49,8 @@ function App() {
   const [statusOn, setStatusOn] = useState(false);
   const [functionActive, setFunctionActive] = useState(true);
   const [overrideSerial, setOverrideSerial] = useState(false);
+  const [overrideConfirmOpen, setOverrideConfirmOpen] = useState(false);
+  const [overridePendingValue, setOverridePendingValue] = useState(false);
   const [loading, setLoading] = useState(true);
   const [barMessage, setBarMessage] = useState('');
   const [barVisible, setBarVisible] = useState(false);
@@ -247,6 +249,32 @@ function App() {
     }
   };
 
+  // Open a custom confirmation dialog before applying override change
+  const handleOverrideChange = (e) => {
+    const newVal = e.target.checked;
+    setOverridePendingValue(newVal);
+    setOverrideConfirmOpen(true);
+  };
+
+  const handleConfirmOverride = async (confirmed) => {
+    setOverrideConfirmOpen(false);
+    if (!confirmed) return; // user cancelled
+
+    const newVal = overridePendingValue;
+    setOverrideSerial(newVal);
+    const cmd = newVal ? 'OVERRIDE_ON' : 'OVERRIDE_OFF';
+    try {
+      const ok = await sendBluetooth(cmd);
+      showBar(`Override ${newVal ? 'enabled' : 'disabled'}`);
+      if (!ok) {
+        showBar('Failed to send override command to device');
+      }
+    } catch (err) {
+      console.error('Override send failed:', err);
+      showBar('Failed to send override command');
+    }
+  };
+
   if (loading) return <div className="app">Loading...</div>;
 
   return (
@@ -274,15 +302,27 @@ function App() {
         <ToggleSwitch
           isOn={statusOn}
           onToggle={() => handleToggle('status', setStatusOn, statusOn)}
+          editable={overrideSerial}
           icon="flag"
           label={statusOn ? 'On' : 'Off'}
         />
         <div className="override-row">
           <label>
-            <input type="checkbox" checked={overrideSerial} onChange={(e) => setOverrideSerial(e.target.checked)} />
+            <input type="checkbox" checked={overrideSerial} onChange={handleOverrideChange} />
             &nbsp;Override
           </label>
         </div>
+        {overrideConfirmOpen && (
+          <div className="modal-overlay" role="presentation">
+            <div className="modal" role="dialog" aria-modal="true">
+              <p>{overridePendingValue ? 'Enable override and allow raw control of the device?' : 'Disable override?'}</p>
+              <div className="modal-actions">
+                <button className="btn confirm" onClick={() => handleConfirmOverride(true)}>Yes</button>
+                <button className="btn cancel" onClick={() => handleConfirmOverride(false)}>No</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="disclaimer">For capstone use only.</div>

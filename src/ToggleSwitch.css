@@ -60,6 +60,15 @@
   color: #ffffff;
 }
 
+
+.toggle-switch.disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.toggle-switch.disabled .toggle-label {
+  color: #666666;
+}
 @media (max-width: 480px) {
   .toggle-switch {
     width: 140px;
